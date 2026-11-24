@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2026 state income tax vs Minnesota</title>
+<style>
+  :root {
+    --paper: #f3efe6;
+    --card: #fffdf8;
+    --ink: #1c1915;
+    --muted: #5e584f;
+    --line: #e3d9c8;
+    --mn: #163e6b;
+    --zero: #2c6b45;
+    --more: #8f3d2c;
+    --save: #1f6b45;
+    --heat-more: #8f3d2c;
+    --heat-less: #1f6b45;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font: 16px/1.5 "Segoe UI", system-ui, sans-serif;
+  }
+  main { max-width: 1080px; margin: 0 auto; padding: 32px 20px 72px; }
+  h1, h2, h3 { font-family: "Iowan Old Style", Palatino, Georgia, serif; font-weight: 600; letter-spacing: -0.02em; }
+  h1 { font-size: 2.15rem; line-height: 1.15; margin: 0 0 8px; }
+  h2 { font-size: 1.45rem; margin: 0 0 8px; }
+  h3 { font-size: 1.05rem; margin: 0 0 8px; }
+  p { margin: 0 0 12px; }
+  a { color: var(--mn); }
+  .deck { color: var(--muted); max-width: 68ch; margin-bottom: 22px; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 18px 18px 16px;
+    margin: 0 0 18px;
+  }
+  .controls { display: grid; gap: 16px; }
+  @media (min-width: 800px) {
+    .controls { grid-template-columns: 1.4fr 0.8fr 0.7fr; align-items: end; }
+  }
+  label { display: block; font-size: 0.82rem; font-weight: 650; letter-spacing: 0.02em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+  .income-row { display: flex; gap: 10px; align-items: center; }
+  input[type="range"] { width: 100%; accent-color: var(--mn); }
+  input[type="number"] {
+    width: 9.2rem; font: 600 1.05rem/1 system-ui, sans-serif;
+    padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: #fff;
+  }
+  .presets { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  button, .seg button {
+    font: 600 0.92rem/1 system-ui, sans-serif;
+    border: 1px solid var(--line); background: #fff; color: var(--ink);
+    border-radius: 999px; padding: 7px 12px; cursor: pointer;
+  }
+  .seg button[aria-pressed="true"], button.preset[aria-pressed="true"] {
+    background: var(--mn); color: #fff; border-color: var(--mn);
+  }
+  .seg { display: flex; gap: 6px; flex-wrap: wrap; }
+  .stepper { display: flex; align-items: center; gap: 8px; }
+  .stepper strong { min-width: 1.2rem; text-align: center; font-size: 1.15rem; }
+  .hint { color: var(--muted); font-size: 0.86rem; margin: 8px 0 0; }
+  .check { display: flex; gap: 8px; align-items: flex-start; text-transform: none; letter-spacing: 0; font-weight: 500; color: var(--ink); font-size: 0.92rem; }
+  .check input { margin-top: 3px; }
+  .lead {
+    font-family: "Iowan Old Style", Palatino, Georgia, serif;
+    font-size: 1.28rem; line-height: 1.35; margin: 0 0 14px;
+  }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-bottom: 14px; }
+  .kpi { background: #f7f3ea; border-radius: 10px; padding: 10px 12px; }
+  .kpi span { display: block; color: var(--muted); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; }
+  .kpi strong { font-size: 1.25rem; }
+  svg.chart { width: 100%; height: auto; display: block; touch-action: none; cursor: crosshair; }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 8px; font-size: 0.86rem; }
+  .legend button { border-radius: 6px; padding: 3px 8px; display: inline-flex; align-items: center; gap: 6px; }
+  .swatch { width: 18px; height: 3px; display: inline-block; }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  th, td { text-align: right; padding: 8px 8px; border-bottom: 1px solid var(--line); }
+  th:first-child, td:first-child { text-align: left; }
+  th button { border: 0; background: transparent; padding: 0; border-radius: 0; font-weight: 700; color: var(--muted); }
+  th button[aria-sort="ascending"]::after { content: " ↑"; }
+  th button[aria-sort="descending"]::after { content: " ↓"; }
+  tr.mn td { background: #e8eef6; }
+  tr.zero td:first-child { color: var(--zero); }
+  .delta-save { color: var(--save); }
+  .delta-more { color: var(--more); }
+  .bars { display: grid; gap: 7px; }
+  .bar-row { display: grid; grid-template-columns: 9.2rem 1fr auto; gap: 8px; align-items: center; font-size: 0.92rem; }
+  .track { background: #efe8db; border-radius: 999px; height: 14px; overflow: hidden; }
+  .fill { height: 100%; border-radius: 999px; }
+  .fill.mn { background: var(--mn); }
+  .fill.zero { background: var(--zero); }
+  .fill.other { background: #8d7355; }
+  .fill.more { background: var(--more); }
+  .amt { font-variant-numeric: tabular-nums; min-width: 11.5rem; text-align: right; }
+  .heat-wrap { overflow-x: auto; }
+  .heat { border-collapse: separate; border-spacing: 2px; font-size: 0.72rem; min-width: 920px; }
+  .heat th, .heat td { padding: 0; border: 0; text-align: center; }
+  .heat td { min-width: 72px; height: 38px; padding: 0 3px; }
+  .heat th { color: var(--muted); font-weight: 650; padding: 2px; }
+  .corner { font-size: 0.7rem; color: var(--muted); text-align: left !important; }
+  details { margin-top: 8px; }
+  summary { cursor: pointer; font-weight: 650; }
+  .sources { font-size: 0.9rem; color: var(--muted); }
+  .sources li { margin: 0 0 6px; }
+  footer { color: var(--muted); font-size: 0.85rem; margin-top: 8px; }
+  @media (max-width: 640px) {
+    h1 { font-size: 1.7rem; }
+    .bar-row { grid-template-columns: 6.4rem 1fr; }
+    .amt { grid-column: 2; text-align: left; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>State income tax, measured against Minnesota</h1>
+  <p class="deck">Tax year 2026 wage income for the states in <code>statesCompare.txt</code>, plus Minnesota as the baseline. Move the income control. The bars, the chart, the rank, and the grid all use the same bill.</p>
+
+  <section class="card" aria-label="Assumptions">
+    <div class="controls">
+      <div>
+        <label for="income">Household wage income</label>
+        <div class="income-row">
+          <input id="income" type="number" min="0" max="1000000" step="1000" value="100000" inputmode="numeric">
+        </div>
+        <input id="slider" type="range" min="0" max="500000" step="1000" value="100000" aria-label="Income slider">
+        <div class="presets" role="group" aria-label="Example incomes">
+          <button type="button" class="preset" data-income="50000">$50k</button>
+          <button type="button" class="preset" data-income="75000">$75k</button>
+          <button type="button" class="preset" data-income="100000">$100k</button>
+          <button type="button" class="preset" data-income="150000">$150k</button>
+          <button type="button" class="preset" data-income="250000">$250k</button>
+          <button type="button" class="preset" data-income="400000">$400k</button>
+        </div>
+      </div>
+      <div>
+        <label>Filing status</label>
+        <div class="seg" role="group" aria-label="Filing status">
+          <button type="button" id="single" aria-pressed="true">Single</button>
+          <button type="button" id="mfj" aria-pressed="false">Married filing jointly</button>
+        </div>
+        <p class="hint">Head of household is not modeled. Brackets for that status are incomplete for this set.</p>
+      </div>
+      <div>
+        <label>Qualifying dependents</label>
+        <div class="stepper">
+          <button type="button" id="dep-down" aria-label="Fewer dependents">−</button>
+          <strong id="dep-val">0</strong>
+          <button type="button" id="dep-up" aria-label="More dependents">+</button>
+        </div>
+        <p class="hint">Changes Minnesota, Utah, Arizona, New Mexico, and Arkansas. Idaho, Montana, and the no-tax states do not give a wage exemption for dependents in this model.</p>
+      </div>
+    </div>
+    <label class="check" style="margin-top:14px">
+      <input type="checkbox" id="az-federal" checked>
+      <span>Arizona standard deduction matches the 2026 federal amount ($16,100 single / $32,200 joint). Uncheck to use the pre-OBBBA indexed amount ($8,350 / $16,700), which is about $194 more tax per single filer who takes the deduction.</span>
+    </label>
+  </section>
+
+  <section class="card">
+    <h2>The bill at this income</h2>
+    <p class="lead" id="lead"></p>
+    <div class="kpis" id="kpis"></div>
+    <svg class="chart" id="chart" viewBox="0 0 860 390" role="img" aria-labelledby="chart-title chart-desc"></svg>
+    <p id="chart-title" class="hint" style="position:absolute;left:-9999px">Line chart of state income tax by wage income</p>
+    <p id="chart-desc" class="hint">Click or drag the chart to set income. Minnesota is the thick navy line. Nevada, South Dakota, Tennessee, and Wyoming sit on the zero line.</p>
+    <div class="legend" id="legend"></div>
+  </section>
+
+  <section class="card" id="vs-mn">
+    <h2>A. Every state against Minnesota</h2>
+    <p id="vs-copy"></p>
+    <div class="bars" id="bars"></div>
+  </section>
+
+  <section class="card" id="vs-each">
+    <h2>B. The states against each other</h2>
+    <p id="rank-copy"></p>
+    <div style="overflow-x:auto">
+      <table id="rank">
+        <thead>
+          <tr>
+            <th><button type="button" data-sort="name">State</button></th>
+            <th><button type="button" data-sort="tax" aria-sort="descending">Tax</button></th>
+            <th><button type="button" data-sort="effective">Effective</button></th>
+            <th><button type="button" data-sort="marginal">Marginal</button></th>
+            <th><button type="button" data-sort="delta">Versus Minnesota</button></th>
+            <th><button type="button" data-sort="share">Share of MN tax</button></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <h3 style="margin-top:22px">Pairwise difference</h3>
+    <p class="hint">Row minus column, in dollars of tax. A green cell means the row state costs less than the column state. Hover a cell for the sentence.</p>
+    <div class="heat-wrap"><table class="heat" id="heat"></table></div>
+  </section>
+
+  <section class="card">
+    <h2>What the numbers include</h2>
+    <p>Full-year resident, wages only, under 65, not blind, standard deduction rather than itemized deductions, no local income tax. Federal income tax is the same in every state and is left out. Dollar amounts on the page are rounded to the nearest dollar. The marginal rate is the extra tax on the next $100 of wages, divided by 100.</p>
+    <details>
+      <summary>Rules used for tax year 2026</summary>
+      <ul class="sources">
+        <li><strong>Minnesota.</strong> 5.35% / 6.80% / 7.85% / 9.85%. Single brackets at $33,310, $109,430, and $203,150. Joint brackets at $48,700, $193,480, and $337,930. Standard deduction $15,300 / $30,600, reduced once federal AGI passes $244,400. Dependent exemption $5,300, phased out at 2 points per $2,500 of AGI over $244,500 single or $366,700 joint. <a href="https://www.revenue.state.mn.us/mndor-pp/21641">Minnesota Department of Revenue, December 16, 2025</a>. Phaseout math follows <a href="https://www.revisor.mn.gov/statutes/cite/290.0121">Minn. Stat. 290.0121</a>. The 1% net-investment-income surtax over $1 million is not in a wage-only bill.</li>
+        <li><strong>Idaho.</strong> 5.3% of Idaho taxable income above a zero band of $4,811 single / $9,622 joint, after the federal standard deduction. The zero band is the 2025 indexed amount; the Commission’s rate-schedule page had not posted a 2026 index when this page was built. <a href="https://tax.idaho.gov/taxes/income-tax/individual-income/individual-income-tax-rate-schedule/">Idaho State Tax Commission rate schedule</a>. The grocery credit is not subtracted.</li>
+        <li><strong>Utah.</strong> 4.45% of state taxable income, treated here as wages. A nonrefundable credit equals 6% of the federal standard deduction plus 6% of $2,167 per dependent, reduced by 1.3 cents per dollar of state taxable income over $18,696 single or $37,392 joint. No tax if wages are at or under the federal standard deduction. <a href="https://le.utah.gov/xcode/Title59/Chapter10/C59-10-S104_2026050620260506.html">Utah Code 59-10-104</a> and the Legislature’s September 16, 2026 taxpayer-credit review.</li>
+        <li><strong>Arizona.</strong> Flat 2.5%. Dependent credit of $100 is applied under $200,000 single / $400,000 joint and dropped at that line. The real credit phases out rather than stopping cold, and this page does not model that slope.</li>
+        <li><strong>New Mexico.</strong> Six brackets from 1.5% to 5.9% under NMSA 7-2-7 for taxable years beginning on or after January 1, 2025. Federal standard deduction. An extra $4,000 deduction applies for each dependent after the first.</li>
+        <li><strong>Arkansas.</strong> Department of Finance and Administration withholding formula effective January 1, 2026: 0% through $5,599 of net taxable income, then 2%, 3%, 3.4%, and 3.7%, with the published bracket adjustments. Standard deduction $2,470 per taxpayer. Personal credit $29 per person. For a short band of net taxable income, about $94,700 to $97,600, those adjustments claw back the lower brackets and the marginal rate jumps to about 13.7% before settling back near 3.7%. A single filer hits that band around $97,000 to $100,000 of wages. The low-income tax table and the extra credit for net income under about $27,600 are not applied, so Arkansas can be a few dozen dollars high at low incomes.</li>
+        <li><strong>Montana.</strong> 4.7% up to $47,500 single / $95,000 joint of Montana taxable income, then 5.65%, under House Bill 337 and MCA 15-30-2103 for 2026. Federal standard deduction. Long-term capital gains use a lower schedule and are not in this wage model. The top rate is scheduled to fall to 5.4% in 2027.</li>
+        <li><strong>Nevada, South Dakota, Tennessee, Wyoming.</strong> No tax on wages.</li>
+        <li><strong>Federal standard deduction used where a state conforms.</strong> $16,100 single and $32,200 joint, from IRS Rev. Proc. 2025-32.</li>
+      </ul>
+    </details>
+    <footer>An estimate for comparison, not a tax return and not advice. A real return can move with itemizing, retirement income, credits, and income earned in another state.</footer>
+  </section>
+</main>
+<script>
+const LINES = [
+  { id: "MN", name: "Minnesota", color: "#163e6b", width: 2.8, dash: "" },
+  { id: "AR", name: "Arkansas", color: "#8f3d2c", width: 1.7, dash: "" },
+  { id: "ID", name: "Idaho", color: "#c2410c", width: 1.7, dash: "" },
+  { id: "UT", name: "Utah", color: "#6d28d9", width: 1.7, dash: "7 4" },
+  { id: "MT", name: "Montana", color: "#a16207", width: 1.7, dash: "" },
+  { id: "NM", name: "New Mexico", color: "#0f766e", width: 1.7, dash: "2 3" },
+  { id: "AZ", name: "Arizona", color: "#0369a1", width: 1.7, dash: "8 3 2 3" },
+  { id: "ZERO", name: "Nevada, South Dakota, Tennessee, Wyoming", color: "#2c6b45", width: 1.7, dash: "4 4" }
+];
+
+const ORDER = ["MN", "SD", "WY", "ID", "UT", "NV", "AZ", "NM", "AR", "TN", "MT"];
+const NAMES = {
+  MN: "Minnesota", SD: "South Dakota", WY: "Wyoming", ID: "Idaho", UT: "Utah",
+  NV: "Nevada", AZ: "Arizona", NM: "New Mexico", AR: "Arkansas", TN: "Tennessee", MT: "Montana"
+};
+const ZERO = new Set(["SD", "WY", "NV", "TN"]);
+
+function bracketTax(taxable, brackets) {
+  if (taxable <= 0) return 0;
+  let tax = 0;
+  for (let i = 0; i < brackets.length; i++) {
+    const over = brackets[i].over;
+    const next = i + 1 < brackets.length ? brackets[i + 1].over : Infinity;
+    tax += Math.max(0, Math.min(taxable, next) - over) * brackets[i].rate;
+  }
+  return tax;
+}
+
+function federalSd(status) { return status === "mfj" ? 32200 : 16100; }
+
+function mnStd(agi, status) {
+  const base = status === "mfj" ? 30600 : 15300;
+  const t1 = 244400;
+  const t2 = 337800;
+  if (agi <= t1) return base;
+  const reduction = Math.min(0.03 * (Math.min(agi, t2) - t1) + 0.10 * Math.max(0, agi - t2), 0.80 * base);
+  return base - reduction;
+}
+
+function mnExempt(agi, status, deps) {
+  if (deps <= 0) return 0;
+  const gross = 5300 * deps;
+  const threshold = status === "mfj" ? 366700 : 244500;
+  if (agi <= threshold) return gross;
+  const steps = Math.ceil((agi - threshold) / 2500);
+  return gross * (1 - Math.min(1, steps * 0.02));
+}
+
+function taxMN(agi, status, deps) {
+  const taxable = Math.max(0, agi - mnStd(agi, status) - mnExempt(agi, status, deps));
+  const brackets = status === "mfj"
+    ? [{ over: 0, rate: 0.0535 }, { over: 48700, rate: 0.068 }, { over: 193480, rate: 0.0785 }, { over: 337930, rate: 0.0985 }]
+    : [{ over: 0, rate: 0.0535 }, { over: 33310, rate: 0.068 }, { over: 109430, rate: 0.0785 }, { over: 203150, rate: 0.0985 }];
+  return bracketTax(taxable, brackets);
+}
+
+function taxID(agi, status) {
+  const taxable = Math.max(0, agi - federalSd(status));
+  const zero = status === "mfj" ? 9622 : 4811;
+  return 0.053 * Math.max(0, taxable - zero);
+}
+
+function taxUT(agi, status, deps) {
+  const sd = federalSd(status);
+  if (agi <= sd) return 0;
+  const phase = status === "mfj" ? 37392 : 18696;
+  const credit = Math.max(0, 0.06 * (sd + 2167 * deps) - 0.013 * Math.max(0, agi - phase));
+  return Math.max(0, 0.0445 * agi - credit);
+}
+
+function taxAZ(agi, status, deps, preObbba) {
+  const sd = preObbba ? (status === "mfj" ? 16700 : 8350) : federalSd(status);
+  const tax = 0.025 * Math.max(0, agi - sd);
+  const credit = agi > (status === "mfj" ? 400000 : 200000) ? 0 : 100 * deps;
+  return Math.max(0, tax - credit);
+}
+
+function taxNM(agi, status, deps) {
+  const depDed = deps > 1 ? (deps - 1) * 4000 : 0;
+  const taxable = Math.max(0, agi - federalSd(status) - depDed);
+  const brackets = status === "mfj"
+    ? [{ over: 0, rate: 0.015 }, { over: 8000, rate: 0.032 }, { over: 25000, rate: 0.043 }, { over: 50000, rate: 0.047 }, { over: 100000, rate: 0.049 }, { over: 315000, rate: 0.059 }]
+    : [{ over: 0, rate: 0.015 }, { over: 5500, rate: 0.032 }, { over: 16500, rate: 0.043 }, { over: 33500, rate: 0.047 }, { over: 66500, rate: 0.049 }, { over: 210000, rate: 0.059 }];
+  return bracketTax(taxable, brackets);
+}
+
+function arGross(nti) {
+  if (nti <= 5599) return 0;
+  if (nti <= 11199) return 0.02 * nti - 111.98;
+  if (nti <= 15999) return 0.03 * nti - 223.97;
+  if (nti <= 26399) return 0.034 * nti - 287.97;
+  if (nti <= 94700) return 0.037 * nti - 367.16;
+  if (nti <= 94800) return 0.037 * nti - 369.90;
+  if (nti >= 97601) return 0.037 * nti - 79.90;
+  const steps = Math.floor((nti - 94801) / 100);
+  return 0.037 * nti - (359.90 - steps * 10);
+}
+
+function taxAR(agi, status, deps) {
+  const nti = Math.max(0, agi - (status === "mfj" ? 4940 : 2470));
+  const credit = 29 * ((status === "mfj" ? 2 : 1) + deps);
+  return Math.max(0, arGross(nti) - credit);
+}
+
+function taxMT(agi, status) {
+  const taxable = Math.max(0, agi - federalSd(status));
+  const width = status === "mfj" ? 95000 : 47500;
+  return bracketTax(taxable, [{ over: 0, rate: 0.047 }, { over: width, rate: 0.0565 }]);
+}
+
+function rawTax(id, agi, status, deps, preObbba) {
+  if (ZERO.has(id)) return 0;
+  if (id === "MN") return taxMN(agi, status, deps);
+  if (id === "ID") return taxID(agi, status);
+  if (id === "UT") return taxUT(agi, status, deps);
+  if (id === "AZ") return taxAZ(agi, status, deps, preObbba);
+  if (id === "NM") return taxNM(agi, status, deps);
+  if (id === "AR") return taxAR(agi, status, deps);
+  if (id === "MT") return taxMT(agi, status);
+  return 0;
+}
+
+function dollars(n) { return Math.round(n); }
+
+function bill(agi, status, deps, preObbba) {
+  return ORDER.map((id) => {
+    const exact = Math.max(0, rawTax(id, agi, status, deps, preObbba));
+    const up = Math.max(0, rawTax(id, agi + 100, status, deps, preObbba));
+    return {
+      id, name: NAMES[id], tax: dollars(exact), exact,
+      marginal: agi >= 1000000 ? 0 : (up - exact) / 100
+    };
+  });
+}
+
+const money = (n) => (n < 0 ? "−$" : "$") + Math.abs(Math.round(n)).toLocaleString("en-US");
+const pct = (n) => (n * 100).toFixed(1) + "%";
+
+const state = { income: 100000, status: "single", deps: 0, azFederal: true, sort: "tax", dir: "desc", hidden: new Set() };
+
+const incomeEl = document.getElementById("income");
+const sliderEl = document.getElementById("slider");
+const leadEl = document.getElementById("lead");
+const kpisEl = document.getElementById("kpis");
+const barsEl = document.getElementById("bars");
+const vsCopy = document.getElementById("vs-copy");
+const rankCopy = document.getElementById("rank-copy");
+const rankBody = document.querySelector("#rank tbody");
+const heatEl = document.getElementById("heat");
+const chartEl = document.getElementById("chart");
+const legendEl = document.getElementById("legend");
+
+function setIncome(n) {
+  state.income = Math.max(0, Math.min(1000000, Math.round(n)));
+  incomeEl.value = state.income;
+  sliderEl.value = Math.min(500000, state.income);
+  sliderEl.max = state.income > 500000 ? "1000000" : "500000";
+  render();
+}
+
+incomeEl.addEventListener("input", () => setIncome(Number(incomeEl.value) || 0));
+sliderEl.addEventListener("input", () => setIncome(Number(sliderEl.value)));
+document.querySelectorAll("[data-income]").forEach((btn) => {
+  btn.addEventListener("click", () => setIncome(Number(btn.dataset.income)));
+});
+document.getElementById("single").addEventListener("click", () => { state.status = "single"; syncStatus(); render(); });
+document.getElementById("mfj").addEventListener("click", () => { state.status = "mfj"; syncStatus(); render(); });
+document.getElementById("dep-down").addEventListener("click", () => { state.deps = Math.max(0, state.deps - 1); render(); });
+document.getElementById("dep-up").addEventListener("click", () => { state.deps = Math.min(8, state.deps + 1); render(); });
+document.getElementById("az-federal").addEventListener("change", (e) => { state.azFederal = e.target.checked; render(); });
+document.querySelectorAll("#rank thead button").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const key = btn.dataset.sort;
+    state.dir = state.sort === key && state.dir === "desc" ? "asc" : "desc";
+    state.sort = key;
+    render();
+  });
+});
+
+function syncStatus() {
+  document.getElementById("single").setAttribute("aria-pressed", String(state.status === "single"));
+  document.getElementById("mfj").setAttribute("aria-pressed", String(state.status === "mfj"));
+}
+
+function rows() {
+  return bill(state.income, state.status, state.deps, !state.azFederal);
+}
+
+function render() {
+  document.getElementById("dep-val").textContent = String(state.deps);
+  document.querySelectorAll(".preset").forEach((btn) => {
+    btn.setAttribute("aria-pressed", String(Number(btn.dataset.income) === state.income));
+  });
+  const data = rows();
+  const mn = data.find((r) => r.id === "MN");
+  const ranked = [...data].sort((a, b) => b.tax - a.tax || a.name.localeCompare(b.name));
+  const hi = ranked[0];
+  const lo = ranked[ranked.length - 1];
+  const tiedHigh = ranked.filter((r) => r.tax === hi.tax);
+  const zeros = data.filter((r) => r.tax === 0);
+  const statusWord = state.status === "mfj" ? "married filing jointly" : "a single filer";
+  const depWord = state.deps === 0 ? "no dependents" : state.deps + (state.deps === 1 ? " dependent" : " dependents");
+
+  const above = data.filter((r) => r.id !== "MN" && r.tax > mn.tax);
+  const aboveTxt = above.length
+    ? above.map((r) => r.name).join(" and ") + (above.length === 1 ? " charges more" : " charge more") + " than Minnesota at this income."
+    : "Every state in the list charges less than Minnesota, or the same if both are zero.";
+
+  leadEl.textContent = "At " + money(state.income) + " of wages, " + statusWord + ", " + depWord + ", Minnesota’s income tax is " + money(mn.tax) + ".";
+  kpisEl.innerHTML = [
+    ["Minnesota tax", money(mn.tax)],
+    ["Minnesota effective", state.income ? pct(mn.tax / state.income) : "—"],
+    ["Largest savings vs MN", money(mn.tax - lo.tax)],
+    ["Most expensive here", tiedHigh.length > 1 ? (hi.tax === 0 ? "All at $0" : tiedHigh.length + " tied") : hi.name]
+  ].map(([k, v]) => "<div class='kpi'><span>" + k + "</span><strong>" + v + "</strong></div>").join("");
+
+  vsCopy.textContent = aboveTxt + " Savings are Minnesota’s tax minus the other state’s tax.";
+
+  const maxTax = Math.max(...data.map((r) => r.tax), 1);
+  const barOrder = [...data].sort((a, b) => b.tax - a.tax || a.name.localeCompare(b.name));
+  barsEl.innerHTML = barOrder.map((r) => {
+    const delta = mn.tax - r.tax;
+    const cls = r.id === "MN" ? "mn" : r.tax === 0 ? "zero" : r.tax > mn.tax ? "more" : "other";
+    const note = r.id === "MN" ? "baseline" : delta > 0 ? money(delta) + " less" : delta < 0 ? money(-delta) + " more" : "same";
+    return "<div class='bar-row'><div>" + r.name + "</div><div class='track'><div class='fill " + cls + "' style='width:" + (100 * r.tax / maxTax) + "%'></div></div><div class='amt'>" + money(r.tax) + " · " + note + "</div></div>";
+  }).join("");
+
+  const spread = hi.tax - lo.tax;
+  const taxing = ranked.filter((r) => r.tax > 0);
+  const cheapestTaxing = taxing[taxing.length - 1];
+  rankCopy.textContent = zeros.length
+    ? zeros.map((r) => r.name).join(", ") + " tie at " + money(0) + ". Among states that tax wages, " + cheapestTaxing.name + " is lowest at " + money(cheapestTaxing.tax) + ". The spread from cheapest to most expensive is " + money(spread) + "."
+    : "The spread from cheapest to most expensive is " + money(spread) + ".";
+
+  const enriched = data.map((r) => ({
+    ...r,
+    effective: state.income ? r.tax / state.income : 0,
+    delta: r.tax - mn.tax,
+    share: mn.tax ? r.tax / mn.tax : 0
+  }));
+  const dir = state.dir === "asc" ? 1 : -1;
+  enriched.sort((a, b) => {
+    const key = state.sort;
+    if (key === "name") return a.name.localeCompare(b.name) * dir;
+    return ((a[key] - b[key]) || a.name.localeCompare(b.name)) * dir;
+  });
+  document.querySelectorAll("#rank thead button").forEach((btn) => {
+    btn.setAttribute("aria-sort", btn.dataset.sort === state.sort ? (state.dir === "asc" ? "ascending" : "descending") : "none");
+  });
+  rankBody.innerHTML = enriched.map((r) => {
+    const cls = r.id === "MN" ? "mn" : r.tax === 0 ? "zero" : "";
+    const deltaCls = r.delta < 0 ? "delta-save" : r.delta > 0 ? "delta-more" : "";
+    const deltaTxt = r.id === "MN" ? "—" : r.delta === 0 ? "same" : (r.delta < 0 ? money(-r.delta) + " less" : money(r.delta) + " more");
+    const shareTxt = r.id === "MN" ? "100%" : mn.tax === 0 ? "—" : Math.round(r.share * 100) + "%";
+    return "<tr class='" + cls + "'><td>" + r.name + "</td><td>" + money(r.tax) + "</td><td>" + (state.income ? pct(r.effective) : "—") + "</td><td>" + pct(r.marginal) + "</td><td class='" + deltaCls + "'>" + deltaTxt + "</td><td>" + shareTxt + "</td></tr>";
+  }).join("");
+
+  drawHeat(data);
+  drawChart();
+}
+
+function drawHeat(data) {
+  const byId = Object.fromEntries(data.map((r) => [r.id, r.tax]));
+  let peak = 1;
+  ORDER.forEach((a) => ORDER.forEach((b) => { peak = Math.max(peak, Math.abs(byId[a] - byId[b])); }));
+  const head = "<tr><th class='corner'>Row − column</th>" + ORDER.map((id) => "<th>" + id + "</th>").join("") + "</tr>";
+  const body = ORDER.map((row) => {
+    const cells = ORDER.map((col) => {
+      const d = byId[row] - byId[col];
+      const t = d === 0 ? 0 : d / peak;
+      const color = d === 0 ? "#f4efe6" : d > 0
+        ? mix("#fffdf8", "#e7b2a4", t)
+        : mix("#fffdf8", "#9dceb0", -t);
+      const sentence = d === 0
+        ? NAMES[row] + " and " + NAMES[col] + " charge the same."
+        : NAMES[row] + " charges " + money(Math.abs(d)) + (d > 0 ? " more" : " less") + " than " + NAMES[col] + ".";
+      return "<td style='background:" + color + "' title='" + sentence + "'>" + (d === 0 ? "0" : (d > 0 ? "+" : "−") + Math.abs(d).toLocaleString("en-US")) + "</td>";
+    }).join("");
+    return "<tr><th>" + row + "</th>" + cells + "</tr>";
+  }).join("");
+  heatEl.innerHTML = head + body;
+}
+
+function mix(a, b, t) {
+  const pa = [1, 3, 5].map((i) => parseInt(a.slice(i, i + 2), 16));
+  const pb = [1, 3, 5].map((i) => parseInt(b.slice(i, i + 2), 16));
+  const c = pa.map((v, i) => Math.round(v + (pb[i] - v) * Math.min(1, Math.max(0, t))));
+  return "#" + c.map((v) => v.toString(16).padStart(2, "0")).join("");
+}
+
+function seriesTax(id, agi) {
+  if (id === "ZERO") return 0;
+  return dollars(Math.max(0, rawTax(id, agi, state.status, state.deps, !state.azFederal)));
+}
+
+function drawChart() {
+  const w = 860, h = 390, l = 64, r = 16, t = 16, b = 36;
+  const xMax = Math.max(500000, state.income);
+  const samples = 250;
+  const xs = Array.from({ length: samples + 1 }, (_, i) => xMax * i / samples);
+  const visible = LINES.filter((ln) => !state.hidden.has(ln.id));
+  let peak = 1;
+  visible.forEach((ln) => xs.forEach((x) => { peak = Math.max(peak, seriesTax(ln.id, x)); }));
+  const scale = axisTop(peak);
+  const yMax = scale.top;
+  const X = (x) => l + (w - l - r) * (x / xMax);
+  const Y = (y) => t + (h - t - b) * (1 - y / yMax);
+  let grid = "";
+  for (let yv = 0; yv <= yMax + 0.5; yv += scale.step) {
+    grid += "<line x1='" + l + "' x2='" + (w - r) + "' y1='" + Y(yv) + "' y2='" + Y(yv) + "' stroke='#eadfce' />";
+    grid += "<text x='" + (l - 8) + "' y='" + (Y(yv) + 4) + "' text-anchor='end' font-size='12' fill='#5e584f'>" + (yv >= 1000 ? "$" + Math.round(yv / 1000) + "k" : "$0") + "</text>";
+  }
+  for (let i = 0; i <= 5; i++) {
+    const xv = xMax * i / 5;
+    grid += "<text x='" + X(xv) + "' y='" + (h - 12) + "' text-anchor='middle' font-size='12' fill='#5e584f'>$" + Math.round(xv / 1000) + "k</text>";
+  }
+  const paths = visible.map((ln) => {
+    const d = xs.map((x, i) => (i ? "L" : "M") + X(x).toFixed(1) + " " + Y(seriesTax(ln.id, x)).toFixed(1)).join(" ");
+    return "<path d='" + d + "' fill='none' stroke='" + ln.color + "' stroke-width='" + ln.width + "' stroke-dasharray='" + ln.dash + "' />";
+  }).join("");
+  const marker = "<line x1='" + X(state.income) + "' x2='" + X(state.income) + "' y1='" + t + "' y2='" + (h - b) + "' stroke='#1c1915' stroke-dasharray='3 3' />";
+  chartEl.innerHTML = grid + paths + marker;
+  chartEl.setAttribute("aria-label", "State income tax from $0 to " + money(xMax) + ". Minnesota at the selected income is " + money(seriesTax("MN", state.income)) + ".");
+
+  legendEl.innerHTML = LINES.map((ln) => {
+    const dim = state.hidden.has(ln.id);
+    return "<button type='button' data-line='" + ln.id + "' aria-pressed='" + (!dim) + "' style='opacity:" + (dim ? 0.35 : 1) + "'><span class='swatch' style='background:" + ln.color + "'></span>" + ln.name + "</button>";
+  }).join("");
+  legendEl.querySelectorAll("button").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const id = btn.dataset.line;
+      if (state.hidden.has(id)) state.hidden.delete(id); else state.hidden.add(id);
+      drawChart();
+    });
+  });
+}
+
+function axisTop(n) {
+  const rough = Math.max(n / 4, 1);
+  const pow = Math.pow(10, Math.floor(Math.log10(rough)));
+  let step = 10 * pow;
+  for (const mult of [1, 2, 2.5, 5, 10]) {
+    if (n / (mult * pow) <= 6) { step = mult * pow; break; }
+  }
+  return { step, top: Math.max(step, Math.ceil(n / step) * step) };
+}
+
+function incomeFromEvent(ev) {
+  const rect = chartEl.getBoundingClientRect();
+  const x = (ev.clientX - rect.left) / rect.width * 860;
+  const l = 64, r = 16;
+  const xMax = Math.max(500000, state.income);
+  const ratio = (x - l) / (860 - l - r);
+  return Math.max(0, Math.min(xMax, ratio * xMax));
+}
+chartEl.addEventListener("pointerdown", (ev) => {
+  chartEl.setPointerCapture(ev.pointerId);
+  setIncome(incomeFromEvent(ev));
+});
+chartEl.addEventListener("pointermove", (ev) => {
+  if (ev.buttons) setIncome(incomeFromEvent(ev));
+});
+
+render();
+</script>
+</body>
+</html>
