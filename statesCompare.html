@@ -99,7 +99,7 @@
   .fill.more { background: var(--more); }
   .amt { font-variant-numeric: tabular-nums; min-width: 11.5rem; text-align: right; }
   .heat-wrap { overflow-x: auto; }
-  .heat { border-collapse: separate; border-spacing: 2px; font-size: 0.72rem; min-width: 920px; }
+  .heat { border-collapse: separate; border-spacing: 2px; font-size: 0.72rem; min-width: 1040px; }
   .heat th, .heat td { padding: 0; border: 0; text-align: center; }
   .heat td { min-width: 72px; height: 38px; padding: 0 3px; }
   .heat th { color: var(--muted); font-weight: 650; padding: 2px; }
@@ -109,6 +109,13 @@
   .sources { font-size: 0.9rem; color: var(--muted); }
   .sources li { margin: 0 0 6px; }
   footer { color: var(--muted); font-size: 0.85rem; margin-top: 8px; }
+  .page-nav { display: flex; gap: 8px; margin: 0 0 18px; }
+  .page-nav a {
+    font-size: 0.86rem; font-weight: 650; text-decoration: none;
+    border: 1px solid var(--line); background: #fff; color: var(--ink);
+    border-radius: 999px; padding: 6px 12px;
+  }
+  .page-nav a[aria-current="page"] { background: var(--mn); color: #fff; border-color: var(--mn); }
   @media (max-width: 640px) {
     h1 { font-size: 1.7rem; }
     .bar-row { grid-template-columns: 6.4rem 1fr; }
@@ -118,6 +125,10 @@
 </head>
 <body>
 <main>
+  <nav class="page-nav" aria-label="Pages">
+    <a href="statesCompare.html" aria-current="page">Income tax</a>
+    <a href="climate.html">Night cooling and landscape</a>
+  </nav>
   <h1>State income tax, measured against Minnesota</h1>
   <p class="deck">Tax year 2026 wage income for the states in <code>statesCompare.txt</code>, plus Minnesota as the baseline. Move the income control. The bars, the chart, the rank, and the grid all use the same bill.</p>
 
@@ -153,7 +164,7 @@
           <strong id="dep-val">0</strong>
           <button type="button" id="dep-up" aria-label="More dependents">+</button>
         </div>
-        <p class="hint">Changes Minnesota, Utah, Arizona, New Mexico, and Arkansas. Idaho, Montana, and the no-tax states do not give a wage exemption for dependents in this model.</p>
+        <p class="hint">Changes Minnesota, Utah, Arizona, New Mexico, and Arkansas. Idaho, Colorado, Montana, and the no-tax states do not give a wage exemption for dependents in this model.</p>
       </div>
     </div>
     <label class="check" style="margin-top:14px">
@@ -211,6 +222,7 @@
         <li><strong>Idaho.</strong> 5.3% of Idaho taxable income above a zero band of $4,811 single / $9,622 joint, after the federal standard deduction. The zero band is the 2025 indexed amount; the Commission’s rate-schedule page had not posted a 2026 index when this page was built. <a href="https://tax.idaho.gov/taxes/income-tax/individual-income/individual-income-tax-rate-schedule/">Idaho State Tax Commission rate schedule</a>. The grocery credit is not subtracted.</li>
         <li><strong>Utah.</strong> 4.45% of state taxable income, treated here as wages. A nonrefundable credit equals 6% of the federal standard deduction plus 6% of $2,167 per dependent, reduced by 1.3 cents per dollar of state taxable income over $18,696 single or $37,392 joint. No tax if wages are at or under the federal standard deduction. <a href="https://le.utah.gov/xcode/Title59/Chapter10/C59-10-S104_2026050620260506.html">Utah Code 59-10-104</a> and the Legislature’s September 16, 2026 taxpayer-credit review.</li>
         <li><strong>Arizona.</strong> Flat 2.5%. Dependent credit of $100 is applied under $200,000 single / $400,000 joint and dropped at that line. The real credit phases out rather than stopping cold, and this page does not model that slope.</li>
+        <li><strong>Colorado.</strong> 4.4% of federal taxable income for 2026. Wages use the federal standard deduction. Once federal AGI exceeds $300,000, Proposition MM adds back the standard deduction above $1,000 single or $2,000 joint, so the bill jumps by about $664 single or $1,329 joint at that line and then stays near 4.4%. <a href="https://tax.colorado.gov/individual-income-tax-guide">Colorado Individual Income Tax Guide, revised January 2026</a>. The child tax credit is not modeled.</li>
         <li><strong>New Mexico.</strong> Six brackets from 1.5% to 5.9% under NMSA 7-2-7 for taxable years beginning on or after January 1, 2025. Federal standard deduction. An extra $4,000 deduction applies for each dependent after the first.</li>
         <li><strong>Arkansas.</strong> Department of Finance and Administration withholding formula effective January 1, 2026: 0% through $5,599 of net taxable income, then 2%, 3%, 3.4%, and 3.7%, with the published bracket adjustments. Standard deduction $2,470 per taxpayer. Personal credit $29 per person. For a short band of net taxable income, about $94,700 to $97,600, those adjustments claw back the lower brackets and the marginal rate jumps to about 13.7% before settling back near 3.7%. A single filer hits that band around $97,000 to $100,000 of wages. The low-income tax table and the extra credit for net income under about $27,600 are not applied, so Arkansas can be a few dozen dollars high at low incomes.</li>
         <li><strong>Montana.</strong> 4.7% up to $47,500 single / $95,000 joint of Montana taxable income, then 5.65%, under House Bill 337 and MCA 15-30-2103 for 2026. Federal standard deduction. Long-term capital gains use a lower schedule and are not in this wage model. The top rate is scheduled to fall to 5.4% in 2027.</li>
@@ -230,13 +242,14 @@ const LINES = [
   { id: "MT", name: "Montana", color: "#a16207", width: 1.7, dash: "" },
   { id: "NM", name: "New Mexico", color: "#0f766e", width: 1.7, dash: "2 3" },
   { id: "AZ", name: "Arizona", color: "#0369a1", width: 1.7, dash: "8 3 2 3" },
+  { id: "CO", name: "Colorado", color: "#be185d", width: 1.7, dash: "" },
   { id: "ZERO", name: "Nevada, South Dakota, Tennessee, Wyoming", color: "#2c6b45", width: 1.7, dash: "4 4" }
 ];
 
-const ORDER = ["MN", "SD", "WY", "ID", "UT", "NV", "AZ", "NM", "AR", "TN", "MT"];
+const ORDER = ["MN", "SD", "WY", "ID", "UT", "NV", "AZ", "CO", "NM", "AR", "TN", "MT"];
 const NAMES = {
   MN: "Minnesota", SD: "South Dakota", WY: "Wyoming", ID: "Idaho", UT: "Utah",
-  NV: "Nevada", AZ: "Arizona", NM: "New Mexico", AR: "Arkansas", TN: "Tennessee", MT: "Montana"
+  NV: "Nevada", AZ: "Arizona", CO: "Colorado", NM: "New Mexico", AR: "Arkansas", TN: "Tennessee", MT: "Montana"
 };
 const ZERO = new Set(["SD", "WY", "NV", "TN"]);
 
@@ -293,6 +306,13 @@ function taxUT(agi, status, deps) {
   return Math.max(0, 0.0445 * agi - credit);
 }
 
+function taxCO(agi, status) {
+  const sd = federalSd(status);
+  const federalTaxable = Math.max(0, agi - sd);
+  const addback = agi > 300000 ? Math.max(0, sd - (status === "mfj" ? 2000 : 1000)) : 0;
+  return 0.044 * (federalTaxable + addback);
+}
+
 function taxAZ(agi, status, deps, preObbba) {
   const sd = preObbba ? (status === "mfj" ? 16700 : 8350) : federalSd(status);
   const tax = 0.025 * Math.max(0, agi - sd);
@@ -339,6 +359,7 @@ function rawTax(id, agi, status, deps, preObbba) {
   if (id === "ID") return taxID(agi, status);
   if (id === "UT") return taxUT(agi, status, deps);
   if (id === "AZ") return taxAZ(agi, status, deps, preObbba);
+  if (id === "CO") return taxCO(agi, status);
   if (id === "NM") return taxNM(agi, status, deps);
   if (id === "AR") return taxAR(agi, status, deps);
   if (id === "MT") return taxMT(agi, status);

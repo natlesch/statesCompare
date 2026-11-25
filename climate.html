@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Night cooling and landscape</title>
+<style>
+  :root {
+    --paper: #f3efe6;
+    --card: #fffdf8;
+    --ink: #1c1915;
+    --muted: #5e584f;
+    --line: #e3d9c8;
+    --mn: #163e6b;
+    --strong: #1f6b45;
+    --good: #0f5f5a;
+    --partial: #8a5a12;
+    --poor: #8f3d2c;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font: 16px/1.5 "Segoe UI", system-ui, sans-serif;
+  }
+  main { max-width: 1180px; margin: 0 auto; padding: 32px 20px 72px; }
+  h1, h2, h3 { font-family: "Iowan Old Style", Palatino, Georgia, serif; font-weight: 600; letter-spacing: -0.02em; }
+  h1 { font-size: 2.15rem; line-height: 1.15; margin: 0 0 8px; }
+  h2 { font-size: 1.45rem; margin: 0 0 8px; }
+  h3 { font-size: 1.05rem; margin: 18px 0 8px; }
+  p { margin: 0 0 12px; }
+  a { color: var(--mn); }
+  .deck { color: var(--muted); max-width: 74ch; margin-bottom: 22px; }
+  .page-nav { display: flex; gap: 8px; margin: 0 0 18px; }
+  .page-nav a {
+    font-size: 0.86rem; font-weight: 650; text-decoration: none;
+    border: 1px solid var(--line); background: #fff; color: var(--ink);
+    border-radius: 999px; padding: 6px 12px;
+  }
+  .page-nav a[aria-current="page"] { background: var(--mn); color: #fff; border-color: var(--mn); }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 18px 18px 16px;
+    margin: 0 0 18px;
+  }
+  .weights { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; margin: 0; padding: 0; list-style: none; }
+  .weights li { background: #f7f3ea; border-radius: 10px; padding: 10px 12px; }
+  .weights strong { display: block; font-size: 0.95rem; }
+  .weights span { color: var(--muted); font-size: 0.84rem; }
+  .filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 12px 0; }
+  .filters label { font-size: 0.82rem; font-weight: 650; letter-spacing: 0.02em; text-transform: uppercase; color: var(--muted); }
+  select, button.fit {
+    font: 600 0.88rem/1 system-ui, sans-serif;
+    border: 1px solid var(--line); background: #fff; color: var(--ink);
+    border-radius: 999px; padding: 7px 12px; cursor: pointer;
+  }
+  button.fit[aria-pressed="true"] { background: var(--mn); color: #fff; border-color: var(--mn); }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 0.92rem; }
+  th, td { text-align: left; padding: 8px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-size: 0.78rem; letter-spacing: 0.03em; text-transform: uppercase; white-space: nowrap; }
+  th button { border: 0; background: transparent; padding: 0; border-radius: 0; font: inherit; font-weight: 700; color: var(--muted); letter-spacing: 0.03em; text-transform: uppercase; cursor: pointer; }
+  th button[aria-sort="ascending"]::after { content: " ↑"; }
+  th button[aria-sort="descending"]::after { content: " ↓"; }
+  td.num, th.num { text-align: right; }
+  tr.strong td.place { box-shadow: inset 3px 0 0 var(--strong); }
+  tr.good td.place { box-shadow: inset 3px 0 0 var(--good); }
+  tr.partial td.place { box-shadow: inset 3px 0 0 var(--partial); }
+  tr.poor td.place { box-shadow: inset 3px 0 0 var(--poor); }
+  .pill {
+    display: inline-block; border-radius: 999px; padding: 1px 8px;
+    font-size: 0.75rem; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase;
+    color: #fff; white-space: nowrap;
+  }
+  .pill.strong { background: var(--strong); }
+  .pill.good { background: var(--good); }
+  .pill.partial { background: var(--partial); }
+  .pill.poor { background: var(--poor); }
+  .place { font-weight: 650; white-space: nowrap; position: sticky; left: 0; background: var(--card); }
+  thead th.place-h { position: sticky; left: 0; background: var(--card); z-index: 1; }
+  .station { display: block; font-weight: 450; color: var(--muted); font-size: 0.78rem; }
+  td.cool { background: #e5eef6; }
+  td.mild { background: #e7f0e8; }
+  td.warm { background: #f8f0dc; }
+  td.hot { background: #f6e4dc; }
+  .hint { color: var(--muted); font-size: 0.86rem; margin: 8px 0 0; }
+  .sources { font-size: 0.9rem; color: var(--muted); padding-left: 1.1rem; }
+  .sources li { margin: 0 0 6px; }
+  footer { color: var(--muted); font-size: 0.85rem; margin-top: 8px; }
+  @media (max-width: 640px) {
+    h1 { font-size: 1.7rem; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <nav class="page-nav" aria-label="Pages">
+    <a href="statesCompare.html">Income tax</a>
+    <a href="climate.html" aria-current="page">Night cooling and landscape</a>
+  </nav>
+  <h1>Night cooling and landscape</h1>
+  <p class="deck">Review table for the states in <code>statesCompare.txt</code>: South Dakota, Wyoming, Idaho, Utah, Nevada, Arizona, New Mexico, Arkansas, Tennessee, and Montana. Temperature and rain are NOAA 1991–2020 monthly normals, rounded to the nearest degree. Rain is the twelve monthly normals added up.</p>
+
+  <section class="card">
+    <h2>What “fit” means</h2>
+    <ol class="weights">
+      <li><strong>1. Cool nights</strong><span>Highest weight. A large drop that still leaves a warm dawn counts for less than a morning in the 50s.</span></li>
+      <li><strong>2. Enclosed ground</strong><span>Fairly high. Hills, canyons, or a valley with forested walls. Open prairie and open sage basins miss this.</span></li>
+      <li><strong>3. Arid over humid</strong><span>Humidity is acceptable when the night still cools. It does not rescue a muggy 70°F dawn.</span></li>
+      <li><strong>4. Less wind</strong><span>High-plains wind is a miss even when the nights are cool.</span></li>
+      <li><strong>5. Some trees</strong><span>A slight preference. Open ponderosa and pinyon-juniper count. Closed humid forest is not required.</span></li>
+    </ol>
+    <p class="hint">Strong means cool nights and enclosed or wooded ground, with wind in a tolerable range. Good slips on rain or on how open the town itself is. Partial wins the climate and loses the landscape, or the other way around. Poor misses the cool night.</p>
+  </section>
+
+  <section class="card">
+    <h2>State overview</h2>
+    <p>One line per state. The station table below is the evidence.</p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>State</th>
+            <th>Ground that fits</th>
+            <th class="num">July nights</th>
+            <th class="num">Rain</th>
+            <th>Wind</th>
+            <th>Read</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="strong">
+            <td class="place">Arizona</td>
+            <td>Mogollon Rim and the White Mountains: Prescott, Payson, Show Low, Pinetop, Flagstaff</td>
+            <td class="num mild">51–63°F</td>
+            <td class="num">13–24 in</td>
+            <td>Moderate. Spring is the windy season.</td>
+            <td><span class="pill strong">Strong</span> Best overlap on this list. July and August monsoon nights run warmer than June.</td>
+          </tr>
+          <tr class="strong">
+            <td class="place">New Mexico</td>
+            <td>Santa Fe foothills, Taos, Los Alamos, Ruidoso. Cloudcroft is higher and wetter.</td>
+            <td class="num mild">48–58°F</td>
+            <td class="num">11–28 in</td>
+            <td>Calmer than the eastern plains.</td>
+            <td><span class="pill strong">Strong</span> Stay off the east side. Clovis, Portales, Tucumcari, and the Roswell flats are high plains.</td>
+          </tr>
+          <tr class="strong">
+            <td class="place">Utah</td>
+            <td>Cedar City and the plateaus above it: Cedar Canyon, Duck Creek, Panguitch, the Bryce side</td>
+            <td class="num mild">57°F at Cedar City</td>
+            <td class="num">11 in</td>
+            <td>Moderate at the airport.</td>
+            <td><span class="pill strong">Strong</span> on the plateau. St. George July nights are 72°F.</td>
+          </tr>
+          <tr class="strong">
+            <td class="place">Montana</td>
+            <td>Missoula and the Bitterroot: Hamilton, Stevensville, Darby</td>
+            <td class="num mild">50–52°F</td>
+            <td class="num">14 in</td>
+            <td>Light in those valleys.</td>
+            <td><span class="pill strong">Strong</span> The humidity exception applies. Eastern Montana, including Great Falls, is windy prairie.</td>
+          </tr>
+          <tr class="good">
+            <td class="place">Idaho</td>
+            <td>Mountain valleys and the Boise foothills. The Wood River valley is the enclosed version.</td>
+            <td class="num mild">52°F at Pocatello, 62°F at Boise</td>
+            <td class="num">12 in</td>
+            <td>The Snake River Plain is a wind corridor.</td>
+            <td><span class="pill good">Good</span> in the mountains. The plain is open sage.</td>
+          </tr>
+          <tr class="good">
+            <td class="place">South Dakota</td>
+            <td>Black Hills only: Custer, Hill City, Spearfish Canyon, the timber around Lead</td>
+            <td class="num mild">54–57°F</td>
+            <td class="num">20–32 in</td>
+            <td>Calmer in the timber than at Rapid City.</td>
+            <td><span class="pill good">Good</span> as an island. The rest of the state is prairie.</td>
+          </tr>
+          <tr class="partial">
+            <td class="place">Nevada</td>
+            <td>Ely and Elko for the climate. Trees are in the canyons, including Lamoille and Mount Charleston.</td>
+            <td class="num cool">49–52°F at Ely and Elko</td>
+            <td class="num">9–10 in</td>
+            <td>Moderate in those basins. Reno has a strong afternoon wind.</td>
+            <td><span class="pill partial">Partial</span> Best nights and driest air. The valleys are open. Las Vegas July nights are 80°F. Pahrump is 68°F. Hawthorne is 63°F and open.</td>
+          </tr>
+          <tr class="partial">
+            <td class="place">Wyoming</td>
+            <td>Jackson and Afton. The Wind River foot at Lander only if the parcel is in the trees.</td>
+            <td class="num cool">41–44°F in those valleys</td>
+            <td class="num">18 in</td>
+            <td>Cheyenne and Casper are among the windiest U.S. cities.</td>
+            <td><span class="pill partial">Partial</span> Most of the state is open steppe with plains wind. The walled valleys are the exception, and they are greener.</td>
+          </tr>
+          <tr class="poor">
+            <td class="place">Tennessee</td>
+            <td>Cumberland Plateau and the eastern ridges, for trees and shelter</td>
+            <td class="num hot">64°F at Crossville, 70°F at Nashville</td>
+            <td class="num">51–58 in</td>
+            <td>Lower than the high plains.</td>
+            <td><span class="pill poor">Poor</span> on the top criterion. Summer nights stay warm.</td>
+          </tr>
+          <tr class="poor">
+            <td class="place">Arkansas</td>
+            <td>Ozarks and Ouachitas, for trees and shelter</td>
+            <td class="num hot">68°F at Harrison, 71°F at Little Rock</td>
+            <td class="num">45–50 in</td>
+            <td>Lower than the high plains.</td>
+            <td><span class="pill poor">Poor</span> on the top criterion. Same summer-night limit as Tennessee.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card" id="stations">
+    <h2>Stations</h2>
+    <p>Airports sit on the open edge of a town. A canyon bench a few miles away is cooler at night, more wooded, and less windy than the airport row. June is the dry-season night in Arizona and New Mexico. July includes the monsoon there.</p>
+    <div class="filters">
+      <label for="state">State</label>
+      <select id="state">
+        <option value="all">All</option>
+        <option>AZ</option><option>NM</option><option>UT</option><option>MT</option>
+        <option>ID</option><option>SD</option><option>NV</option><option>WY</option>
+        <option>TN</option><option>AR</option>
+      </select>
+      <button type="button" class="fit" data-fit="all" aria-pressed="true">All fits</button>
+      <button type="button" class="fit" data-fit="strong" aria-pressed="false">Strong</button>
+      <button type="button" class="fit" data-fit="good" aria-pressed="false">Good</button>
+      <button type="button" class="fit" data-fit="partial" aria-pressed="false">Partial</button>
+      <button type="button" class="fit" data-fit="poor" aria-pressed="false">Poor</button>
+    </div>
+    <div class="table-wrap">
+      <table id="stations-table">
+        <thead>
+          <tr>
+            <th><button type="button" data-sort="fit" aria-sort="ascending">Fit</button></th>
+            <th class="place-h"><button type="button" data-sort="place">Place</button></th>
+            <th class="num"><button type="button" data-sort="elev">Elev.</button></th>
+            <th class="num"><button type="button" data-sort="julLow">July low</button></th>
+            <th class="num"><button type="button" data-sort="julHigh">July high</button></th>
+            <th class="num"><button type="button" data-sort="julDrop">July drop</button></th>
+            <th class="num"><button type="button" data-sort="junLow">June low</button></th>
+            <th class="num"><button type="button" data-sort="rain">Rain / yr</button></th>
+            <th><button type="button" data-sort="wind">Wind</button></th>
+            <th>Land</th>
+            <th>Limit</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <p class="hint" id="count"></p>
+  </section>
+
+  <section class="card">
+    <h2>Why the night cools</h2>
+    <p>After sunset the ground sheds heat as infrared. Dry air and a clear sky let that heat escape. Water vapor and clouds send some of it back down, so a humid or cloudy night stays warm. Calm air lets a cold layer form on the ground. Wind stirs warmer air down and cuts the drop. Dry soil and open juniper or ponderosa heat and cool quickly. A closed forest canopy holds the heat.</p>
+    <p>Elevation does three jobs. Thinner air is usually drier, so the drop is often larger. The whole curve sits lower, roughly 3–5°F per 1,000 feet, which is why Las Vegas can fall 24°F and still be 80°F at dawn while Ely falls 40°F and is 49°F. Cold air also drains downhill. Canyon floors get the coldest nights. Ridge tops stay warmer and take the wind. A mid-slope bench is the practical site: a real overnight drop, some trees, and less wind than a pass.</p>
+    <p>In Arizona and New Mexico, judge May, June, and September. July and August bring monsoon moisture, and the dawn runs warmer than the dry-season numbers.</p>
+    <h3>Sources</h3>
+    <ul class="sources">
+      <li>Temperature, rain, and elevation: NOAA NCEI 1991–2020 U.S. Climate Normals, monthly, for the station named on each row. Elevation is the GHCN station elevation converted from meters.</li>
+      <li>Wind bands are a regional reading, not a single normals field. Cheyenne, Casper, and Great Falls sit in published NOAA city rankings near 12–15 mph annual average. Prescott’s airport wind in a local normals summary runs about 6–9 mph. Elko and Ely summer wind in Weather Spark hourly averages is about 7–8 mph. Valley towns such as Missoula and Hamilton are lighter than the high plains.</li>
+      <li>The physics in brief: National Weather Service Reno, on water vapor and a 35–45°F desert swing; Encyclopaedia Britannica, diurnal range increasing inland and on high plateaus.</li>
+    </ul>
+    <footer>A comparison for choosing country, not a site survey. A parcel’s night temperature moves with slope, cold-air drainage, and tree cover.</footer>
+  </section>
+</main>
+<script>
+const FIT_RANK = { strong: 1, good: 2, partial: 3, poor: 4 };
+const ROWS = [
+  { fit: "strong", place: "Payson", st: "AZ", station: "Payson", elev: 4850, julHigh: 92, julLow: 60, junLow: 51, rain: 19.8, wind: "Moderate", windRank: 2, land: "Rim woodland", limit: "Monsoon nights in July and August" },
+  { fit: "strong", place: "Prescott", st: "AZ", station: "Love Field", elev: 5013, julHigh: 90, julLow: 63, junLow: 56, rain: 12.8, wind: "Moderate, 6–9 mph", windRank: 2, land: "Pine and juniper hills", limit: "July low is 63°F. June nights are the dry-season test." },
+  { fit: "strong", place: "Show Low", st: "AZ", station: "Airport", elev: 6411, julHigh: 85, julLow: 59, junLow: 54, rain: 15.7, wind: "Moderate", windRank: 2, land: "Open ponderosa park", limit: "More open than Pinetop or Payson" },
+  { fit: "strong", place: "Pinetop", st: "AZ", station: "Pinetop 2E", elev: 7200, julHigh: 82, julLow: 52, junLow: 46, rain: 24.1, wind: "Sheltered", windRank: 1, land: "Pine forest", limit: "Wetter, about 24 inches" },
+  { fit: "strong", place: "Flagstaff", st: "AZ", station: "Pulliam Airport", elev: 6999, julHigh: 82, julLow: 51, junLow: 42, rain: 20.5, wind: "Moderate", windRank: 2, land: "Pine forest", limit: "Wetter than Prescott, about 21 inches" },
+  { fit: "strong", place: "Santa Fe", st: "NM", station: "Municipal airport", elev: 6287, julHigh: 88, julLow: 58, junLow: 52, rain: 10.7, wind: "Moderate, spring", windRank: 2, land: "Piñon-juniper at the airport", limit: "The Sangre de Cristo side is the enclosed ground" },
+  { fit: "strong", place: "Taos", st: "NM", station: "Taos", elev: 6965, julHigh: 86, julLow: 53, junLow: 47, rain: 12.7, wind: "Sheltered relative to the plains", windRank: 1, land: "Foothills and canyon", limit: "The mesa west of town is more open" },
+  { fit: "strong", place: "Ruidoso", st: "NM", station: "Ruidoso", elev: 6930, julHigh: 81, julLow: 51, junLow: 47, rain: 22.0, wind: "Sheltered in town", windRank: 1, land: "Pine forest", limit: "Wetter, about 22 inches, with a heavier monsoon" },
+  { fit: "strong", place: "Los Alamos", st: "NM", station: "Los Alamos", elev: 7424, julHigh: 82, julLow: 57, junLow: 54, rain: 17.5, wind: "Sheltered", windRank: 1, land: "Forested mesa", limit: "About 18 inches, still cool at night" },
+  { fit: "strong", place: "Cedar City", st: "UT", station: "Airport", elev: 5590, julHigh: 91, julLow: 57, junLow: 48, rain: 11.0, wind: "Moderate, about 7–9 mph", windRank: 2, land: "Juniper at the airport", limit: "Pine is in the canyons above town" },
+  { fit: "strong", place: "Hamilton", st: "MT", station: "Hamilton", elev: 3585, julHigh: 84, julLow: 50, junLow: 45, rain: 13.6, wind: "Light valley", windRank: 1, land: "Bitterroot, forested walls", limit: "Greener than the Southwest. The floor is grass." },
+  { fit: "strong", place: "Missoula", st: "MT", station: "International airport", elev: 3195, julHigh: 85, julLow: 52, junLow: 46, rain: 14.1, wind: "Light, about 5–8 mph", windRank: 1, land: "Grassy floor, forested walls", limit: "Same humidity exception as the Bitterroot" },
+
+  { fit: "good", place: "Cloudcroft", st: "NM", station: "Cloudcroft", elev: 8723, julHigh: 72, julLow: 48, junLow: 45, rain: 28.4, wind: "Mountain", windRank: 2, land: "High pine forest", limit: "Cool nights with about 28 inches of rain" },
+  { fit: "good", place: "Custer", st: "SD", station: "Custer", elev: 5480, julHigh: 80, julLow: 56, junLow: 50, rain: 20.7, wind: "Calmer in the timber", windRank: 2, land: "Black Hills ponderosa", limit: "An island. The plains around it are the miss." },
+  { fit: "good", place: "Lead", st: "SD", station: "Lead", elev: 5112, julHigh: 82, julLow: 57, junLow: 50, rain: 31.8, wind: "Sheltered by the Hills", windRank: 2, land: "Wet ponderosa hills", limit: "About 32 inches, the wet end of the Hills" },
+  { fit: "good", place: "Jackson", st: "WY", station: "Jackson", elev: 6210, julHigh: 79, julLow: 41, junLow: 38, rain: 17.6, wind: "Sheltered valley", windRank: 1, land: "Forested mountain valley", limit: "Excellent nights, greener, winter cold pools in the valley" },
+  { fit: "good", place: "Afton", st: "WY", station: "Afton", elev: 6248, julHigh: 80, julLow: 44, junLow: 38, rain: 17.7, wind: "Sheltered valley", windRank: 1, land: "Star Valley, enclosed", limit: "Greener than the basins, about 18 inches" },
+
+  { fit: "partial", place: "Ely", st: "NV", station: "Airport", elev: 6250, julHigh: 89, julLow: 49, junLow: 41, rain: 9.4, wind: "Moderate, about 7–8 mph", windRank: 2, land: "High sage and pinyon", limit: "Best overnight drop on the list. The valley is open." },
+  { fit: "partial", place: "Elko", st: "NV", station: "Regional airport", elev: 5054, julHigh: 92, julLow: 52, junLow: 45, rain: 10.0, wind: "Moderate, about 7 mph in July", windRank: 2, land: "Sage basin", limit: "Trees are in the Rubies, not on the valley floor" },
+  { fit: "partial", place: "Hawthorne", st: "NV", station: "Hawthorne", elev: 4400, julHigh: 95, julLow: 63, junLow: 56, rain: 4.2, wind: "Basin", windRank: 2, land: "Open desert basin", limit: "Cools off and stays open. Dyer is this class of country." },
+  { fit: "partial", place: "Reno", st: "NV", station: "Airport", elev: 4405, julHigh: 94, julLow: 60, junLow: 54, rain: 7.4, wind: "Afternoon zephyr", windRank: 3, land: "Open valley, trees on the west bench", limit: "The afternoon wind is part of the climate" },
+  { fit: "partial", place: "Pocatello", st: "ID", station: "Regional airport", elev: 4451, julHigh: 89, julLow: 52, junLow: 46, rain: 11.8, wind: "Snake Plain corridor", windRank: 3, land: "Open sage plain", limit: "Strong night cooling on open, windy ground" },
+  { fit: "partial", place: "Boise", st: "ID", station: "Air terminal", elev: 2823, julHigh: 93, julLow: 62, junLow: 54, rain: 11.5, wind: "Moderate", windRank: 2, land: "Open valley", limit: "The foothills have the trees. July nights are 62°F." },
+  { fit: "partial", place: "Albuquerque", st: "NM", station: "International airport", elev: 5310, julHigh: 91, julLow: 66, junLow: 62, rain: 8.8, wind: "Moderate, spring", windRank: 2, land: "Open valley and mesa", limit: "July nights stay in the mid-60s" },
+  { fit: "partial", place: "Lander", st: "WY", station: "Airport", elev: 5572, julHigh: 88, julLow: 55, junLow: 48, rain: 13.2, wind: "Foothill wind", windRank: 3, land: "Basin meeting the Wind Rivers", limit: "The mountain side of town is the usable ground" },
+  { fit: "partial", place: "Sheridan", st: "WY", station: "Airport", elev: 3971, julHigh: 88, julLow: 54, junLow: 47, rain: 14.9, wind: "Plains wind", windRank: 3, land: "Prairie at the Bighorns", limit: "Cool nights on open ground" },
+  { fit: "partial", place: "Rapid City", st: "SD", station: "Regional airport", elev: 3162, julHigh: 86, julLow: 58, junLow: 52, rain: 17.4, wind: "Plains wind", windRank: 3, land: "Prairie edge of the Hills", limit: "The timber is west of town, in the Hills" },
+  { fit: "partial", place: "Pahrump", st: "NV", station: "4 NW", elev: 2573, julHigh: 101, julLow: 68, junLow: 61, rain: 5.0, wind: "Basin", windRank: 2, land: "Open desert valley", limit: "A 33°F drop that still leaves a 68°F July dawn" },
+
+  { fit: "partial", place: "Casper", st: "WY", station: "Natrona County airport", elev: 5319, julHigh: 89, julLow: 53, junLow: 45, rain: 12.2, wind: "Very windy, about 12–13 mph", windRank: 4, land: "Open high plains", limit: "Cool nights with high-plains wind" },
+  { fit: "partial", place: "Cheyenne", st: "WY", station: "Airport", elev: 6193, julHigh: 84, julLow: 56, junLow: 49, rain: 15.4, wind: "Very windy, about 13–15 mph", windRank: 4, land: "Open high plains", limit: "Among the windiest cities in the country" },
+  { fit: "partial", place: "Great Falls", st: "MT", station: "Airport", elev: 3667, julHigh: 84, julLow: 51, junLow: 46, rain: 14.8, wind: "Very windy, about 12.5 mph", windRank: 4, land: "Open prairie", limit: "Cool nights on windy prairie" },
+  { fit: "poor", place: "St. George", st: "UT", station: "St. George", elev: 2857, julHigh: 102, julLow: 72, junLow: 64, rain: 9.3, wind: "Moderate", windRank: 2, land: "Low desert", limit: "Arid, and July nights stay at 72°F" },
+  { fit: "poor", place: "Las Vegas", st: "NV", station: "Airport", elev: 2189, julHigh: 104, julLow: 80, junLow: 74, rain: 4.0, wind: "Moderate", windRank: 2, land: "Mojave basin", limit: "A 24°F drop to an 80°F dawn" },
+  { fit: "poor", place: "Crossville", st: "TN", station: "Memorial airport", elev: 1865, julHigh: 83, julLow: 64, junLow: 60, rain: 57.5, wind: "Lower than the plains", windRank: 1, land: "Cumberland Plateau forest", limit: "Trees and shelter, with a 64°F July night" },
+  { fit: "poor", place: "Harrison", st: "AR", station: "Boone County airport", elev: 1371, julHigh: 89, julLow: 68, junLow: 64, rain: 44.5, wind: "Lower than the plains", windRank: 1, land: "Ozark forest", limit: "Enclosed and wooded, with a 68°F July night" },
+  { fit: "poor", place: "Nashville", st: "TN", station: "International airport", elev: 587, julHigh: 91, julLow: 70, junLow: 66, rain: 50.5, wind: "Lower than the plains", windRank: 2, land: "Humid lowland", limit: "July nights near 70°F" },
+  { fit: "poor", place: "Little Rock", st: "AR", station: "Adams Field", elev: 251, julHigh: 92, julLow: 71, junLow: 68, rain: 50.4, wind: "Lower than the plains", windRank: 2, land: "Humid lowland", limit: "July nights near 70°F" }
+];
+
+const state = { fit: "all", st: "all", sort: "fit", dir: "asc" };
+const tbody = document.querySelector("#stations-table tbody");
+
+function nightClass(low) {
+  if (low < 50) return "cool";
+  if (low < 59) return "mild";
+  if (low < 66) return "warm";
+  return "hot";
+}
+
+function visible() {
+  return ROWS.filter(r => (state.fit === "all" || r.fit === state.fit) && (state.st === "all" || r.st === state.st));
+}
+
+function value(row, key) {
+  if (key === "fit") return FIT_RANK[row.fit];
+  if (key === "place") return row.place;
+  if (key === "wind") return row.windRank;
+  return row[key];
+}
+
+function render() {
+  const rows = visible().sort((a, b) => {
+    const av = value(a, state.sort);
+    const bv = value(b, state.sort);
+    let cmp = 0;
+    if (typeof av === "string") cmp = av.localeCompare(bv);
+    else cmp = av - bv;
+    if (cmp === 0) cmp = FIT_RANK[a.fit] - FIT_RANK[b.fit] || a.julLow - b.julLow || a.place.localeCompare(b.place);
+    return state.dir === "asc" ? cmp : -cmp;
+  });
+  tbody.replaceChildren(...rows.map(r => {
+    const tr = document.createElement("tr");
+    tr.className = r.fit;
+    const drop = r.julHigh - r.julLow;
+    tr.innerHTML = `
+      <td><span class="pill ${r.fit}">${r.fit}</span></td>
+      <td class="place">${r.place}, ${r.st}<span class="station">${r.station}</span></td>
+      <td class="num">${r.elev.toLocaleString()} ft</td>
+      <td class="num ${nightClass(r.julLow)}">${r.julLow}°F</td>
+      <td class="num">${r.julHigh}°F</td>
+      <td class="num">${drop}°F</td>
+      <td class="num">${r.junLow}°F</td>
+      <td class="num">${r.rain.toFixed(1)} in</td>
+      <td>${r.wind}</td>
+      <td>${r.land}</td>
+      <td>${r.limit}</td>`;
+    return tr;
+  }));
+  document.getElementById("count").textContent = rows.length + " of " + ROWS.length + " stations.";
+}
+
+document.getElementById("state").addEventListener("change", e => { state.st = e.target.value; render(); });
+document.querySelectorAll("button.fit").forEach(btn => {
+  btn.addEventListener("click", () => {
+    state.fit = btn.dataset.fit;
+    document.querySelectorAll("button.fit").forEach(b => b.setAttribute("aria-pressed", b === btn ? "true" : "false"));
+    render();
+  });
+});
+document.querySelectorAll("#stations-table th button").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const key = btn.dataset.sort;
+    state.dir = state.sort === key && state.dir === "asc" ? "desc" : "asc";
+    state.sort = key;
+    document.querySelectorAll("#stations-table th button").forEach(b => b.removeAttribute("aria-sort"));
+    btn.setAttribute("aria-sort", state.dir === "asc" ? "ascending" : "descending");
+    render();
+  });
+});
+render();
+</script>
+</body>
+</html>
